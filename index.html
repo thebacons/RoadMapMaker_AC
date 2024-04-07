@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Submit Dates</title>
+    <script src="https://unpkg.com/adaptivecards@latest/dist/adaptivecards.js"></script>
+    <style>
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .loading-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.5);
+            z-index: 9999;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="adaptiveCardContainer"></div>
+   
+    <div class="loading-container">
+        <img id="loading" src="/spinner.gif">
+      </div>
+
+    <script>
+        AdaptiveCards.AdaptiveCard.onExecuteAction = function(action) {
+            if (action instanceof AdaptiveCards.OpenUrlAction) {
+                window.open(action.url, '_blank');
+            }
+        };
+
+        var adaptiveCard = {
+            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+            "type": "AdaptiveCard",
+            "version": "1.0",
+            "body": [
+                {
+                    "type": "Input.Date",
+                    "id": "startDate",
+                    "title": "Start Date"
+                },
+                {
+                    "type": "Input.Date",
+                    "id": "endDate",
+                    "title": "End Date"
+                },
+                {
+                    "type": "Input.Toggle",
+                    "id": "showWeekends",
+                    "title": "Show Weekends",
+                    "valueOn": "true",
+                    "valueOff": "false"
+                },
+                {
+                    "type": "ActionSet",
+                    "actions": [
+                        {
+                            "type": "Action.Submit",
+                            "title": "Submit"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var adaptiveCardContainer = document.getElementById("adaptiveCardContainer");
+        var adaptiveCardInstance = new AdaptiveCards.AdaptiveCard();
+        adaptiveCardInstance.parse(adaptiveCard);
+        var renderedCard = adaptiveCardInstance.render();
+        adaptiveCardContainer.appendChild(renderedCard);
+        
+        adaptiveCardInstance.onExecuteAction = function(action) {
+            if (action instanceof AdaptiveCards.SubmitAction) {
+                var inputs = action.data;
+                console.log(inputs);
+
+                if (inputs && 'startDate' in inputs && 'endDate' in inputs) {
+                    var startDate = new Date(inputs.startDate);
+                    var endDate = new Date(inputs.endDate);
+                    var showWeekends = inputs.showWeekends === "true";
+                    var formattedStartDate = startDate.getFullYear() + '-' + (startDate.getMonth() + 1).toString().padStart(2, '0') + '-' + startDate.getDate().toString().padStart(2, '0');
+                    var formattedEndDate = endDate.getFullYear() + '-' + (endDate.getMonth() + 1).toString().padStart(2, '0') + '-' + endDate.getDate().toString().padStart(2, '0');
+
+                    // Show the spinner
+                    document.querySelector('.loading-container').style.display = 'flex';
+
+                    fetch('http://localhost:3000/trigger', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            start_date: formattedStartDate,
+                            end_date: formattedEndDate,
+                            show_weekends: showWeekends,
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                    
+                        // Hide the spinner
+                    document.querySelector('.loading-container').style.display = 'none';
+
+                        console.log(data); // Log the data to the console
+                        console.log(data.roadmapurl); // Log the URL to the console
+                        var resultCard = {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "type": "AdaptiveCard",
+                            "version": "1.0",
+                            "body": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": "Result",
+                                    "size": "Large"
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "Click the link below to view the roadmap:"
+                                }
+                            ],
+                            "actions": [
+                                {
+                                    "type": "Action.OpenUrl",
+                                    "title": "View Roadmap",
+                                    "url": data.roadmapurl
+                                }
+                            ]
+                        };
+                        var resultCardInstance = new AdaptiveCards.AdaptiveCard();
+                        resultCardInstance.parse(resultCard);
+                        var renderedResultCard = resultCardInstance.render();
+                        adaptiveCardContainer.appendChild(renderedResultCard);
+                    })
+                    .catch((error) => {
+                        // Hide the spinner
+                        document.querySelector('.loading-container').style.display = 'none';
+
+                        console.error('Error:', error);
+                    });
+                } else {
+                    console.error('Error: Missing startDate or endDate');
+                }
+            }
+        };
+    </script>
+</body>
+</html>

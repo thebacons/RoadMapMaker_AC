@@ -1,0 +1,372 @@
+
+/*
+
+This is a new approach for drawing the gantt chart
+Read the date range and use that instead to determine date coordinates
+Reverse engineer and re-Build another dateArray with all metadata woth cell or test writing a 
+addnamedItems as a json text to cell 1,1 when ceating the canvas.
+alterntiavel this could be done dynamically ie. find the date - get the address of that cell and plot
+
+1 - read the startdate 
+check if valid i.e. is it on the canvas
+yes - then set as start range
+no . then use the ealierst start date on the canvas and mark that as an error in a column and paint in grey
+2. Read the endDate
+check if valid i.e. is it on the canvas
+yes - then set as end range
+no . then use the latest end  date on the canvas and mark that as an error in a column and paint in grey
+That's it
+
+
+*/
+function main(workbook: ExcelScript.Workbook) {
+
+// Background Colours
+const RGB1 = "#0e316e"; //Dark Blue cell background
+const RGB2 = "#1e7ec7"; //Light Blue cell background
+const RGB3 = "#7209db"; //Grey for weekends
+
+/*
+This script will only work if a RoadMap canvas has previously been built
+It Checks the number of rows in the start and end date columns and validate the 
+dates entered are on the canvas
+*/
+
+  //Define worksheet
+  let roadMapSheet = workbook.getWorksheet("RoadMapSheet");
+  let usedRoadMapRange = roadMapSheet.getUsedRange(); 
+  let rowCount = usedRoadMapRange.getRowCount();
+  let columnCount = usedRoadMapRange.getColumnCount();
+  let lastColumnRange = usedRoadMapRange.getAddress()
+  let endColumn = columnCount - 7; //The actual size of the roadMap subtacking any header columns
+    console.log(usedRoadMapRange)
+    console.log(rowCount)
+    console.log(columnCount)
+    console.log(lastColumnRange)
+    console.log(endColumn)
+
+/*
+Now Reading the dates on the roadMapSheet canvas. The list of dates is on row 3 (zero-indexed).
+Subtract j=7 as the starting postion of the column count from the total column count
+This need be changed if different starting postion used
+*/
+  //Build the RoadMapDatesarray
+  let dateArray = (roadMapSheet.getRangeByIndexes(3, 7, 1, (endColumn)).getUsedRange().getTexts());
+ 
+  
+  //dateArray.setNumberFormat("dd/mm/yyyy")  //set the date format to ensure these are dates
+  
+    
+  let roadMapDateRangeAddress = roadMapSheet.getRangeByIndexes(3, 7, 1, (endColumn)).getAddress();
+
+//Build the RoadMapDatesarray
+  let dateArrayRange = roadMapSheet.getRangeByIndexes(3, 7, 1, (endColumn)).getUsedRange()
+
+
+
+  
+/*---------------------------------------------------------------------
+            determine the DIMENSIONS of the dateArray[]
+----------------------------------------------------------------------        
+This worksout dynamically the size of the array and sets the range size accordingly.
+*/
+let dimensions = [
+    dateArray.length,
+    dateArray.reduce((x, y) => Math.max(x, y.length), 0)
+];
+
+  //debug statements
+  console.log(dateArray)
+  console.log("lastColumnRange = " + lastColumnRange);
+  console.log("rowCount =" + rowCount);
+  console.log("columnCount = " + columnCount);
+  console.log("61 -> roadMapDateRangeAddress =" + roadMapDateRangeAddress)
+  console.log("dimensions of the date range (excluding any offset Column-start, number of cells )= " + dimensions)
+
+
+  /********************************************************************** *
+           Playing with range and dates here to see what works
+     **************************************************************************/
+
+//Clean this next but of code up 
+  let anotherRange = roadMapSheet.getRange("H4:" + roadMapDateRangeAddress);
+ 
+  //set the format of the date 
+  anotherRange.setNumberFormat("dd/mm/yyyy")  //set the date format to ensure these are dates
+  let roadMapDates = anotherRange.getTexts();
+  console.log("roadMapDates =");
+  console.log(roadMapDates);
+  console.log(anotherRange.getValues());
+  console.log(anotherRange.getTexts());
+  
+
+
+
+  
+/* 
+  ---------------------------------------------------------------------
+      determine the Earliest and Lastest dates available on the canvas
+      The dateArray has been reversed engineered by reading the canvas dates and 
+      creating a dateArray with metadata of cell coordinates
+  ----------------------------------------------------------------------  
+*/      
+let earliestCanvasDate = dateArray[0][0];
+  console.log("earliestCanvasDate")
+console.log(earliestCanvasDate[0][0])
+  let latestCanvasDate = dateArray[0][endColumn-1];
+console.log("latestCanvasDate = " + (latestCanvasDate))
+
+/*
+  ---------------------------------------------------------------------
+     Now  create an new array for all startDates and endDates to be plotted 
+     lotted need to be columns C & D
+  ----------------------------------------------------------------------
+*/
+//let dates2PlotRange = workbook.getWorksheet("RoadMapSheet").getRangeByIndexes(5,2,rowCount,2).getUsedRange();
+  
+//let dates2PlotRange = workbook.getWorksheet("RoadMapSheet").getRangeByIndexes(5,2,rowCount,2).getUsedRange();
+  let date2PlotRange = roadMapSheet.getRange("C6:D" + rowCount);
+  date2PlotRange.setNumberFormat("dd/mm/yyyy")  //set the date format to ensure these are dates
+  
+/* 
+    ----------------------------------------------------------------------
+                       Test Effort Range Array
+   ----------------------------------------------------------------------
+*/
+
+    //Build the test effort array
+    let testEffortArrayRange  = roadMapSheet.getRange("E6:" + "E" + rowCount).getValues();
+    console.log("----------------------Test Effort Array ------------------------------")
+    console.log("----------------------------------------------------------------------")
+    console.log("_______________________GOT HERE__________________")
+    console.log("Test Effort Array =")
+
+ /*
+    ----------------------------------------------------------------------
+                    Build the dates2PlotArray 
+     ----------------------------------------------------------------------
+ */
+    
+    let dates2PlotArray = date2PlotRange.getTexts() //this builds an array of actual values from the cells
+    let dates2PlotArrayTexts = date2PlotRange.getTexts() //this builds an array of text from the cells
+    console.log("----------------------dates2PlotArray ------------------------------")
+    console.log(dates2PlotArray) //list the start and end dates loaded
+
+//get the length of the array 
+  let dates2PlotArrayDimensions = dates2PlotArray.length
+    console.log("Size of dates2PlotArrayDimensions is = " + dates2PlotArrayDimensions)
+
+ 
+/********************************************************** 
+  Loop through the list of Scernarios
+***********************************************************/
+  //Read the dates2PlotArray  and check for valid dates
+  //plot date only if valid otherwise highlight with and error
+  
+  for (let Loop = 0; Loop < dates2PlotArrayDimensions;Loop++) {  
+    
+//Read the 1st elelment of the array which is the startDate
+    let startDate2Plot =  (dates2PlotArray[Loop][0]); 
+    
+    console.log("startDate2Plot in Array = " + startDate2Plot);
+
+//convert the String from the Array to a Date
+    
+
+    /*
+    ---------------------------------------------------------------------
+    To determine an actual endDate based on number of days added to a startDate
+    the addDays() function is used. This however requires a real Date fomrat.
+    Therefore the dates (which are Strings) in the date2PlotArray need to 
+    1. first Split the dates which are stored in the dates2PlotArray in Day, month Year
+    2. re-assemble as date and create a new Date() class of the date. 
+    3. This is then passed to the addDays() funtion where a newEndDate is calculated
+    4. The newEndDate is then searched in the RoadMap to see if it exists otherwise it'll be skipped. the RoadMap will then need to be exteded to correct that problem.
+   To-Do-  Move this code in to a funnction so it's easier to read the code
+    ---------------------------------------------------------------
+    */
+    
+   
+   // This is for debug only. It shows how dates can be split by 
+   // a delimter "." and picks out the year element of the string. 
+   // let aSplitDate = startDate2Plot.split(".") //for debug only
+   // let aSplitDateYear = aSplitDate[2] //for debug only
+
+
+    let startDateDay = Number(startDate2Plot.split(".")[0])
+    let startDateMonth = Number(startDate2Plot.split(".")[1])
+    let startDateYear = Number(startDate2Plot.split(".")[2])
+    //For debug only
+    console.log("startDateDay = " + startDateDay);
+    console.log("startDateMonth = " + startDateMonth);
+    console.log("startDateYear = " + startDateYear);
+
+    // Convert the convertedStartdate to a the format YYYY-MM-DD
+    // the variable needs to be in Date a format
+    let convertedStartdate = new Date (formatDate( new Date(startDateYear,startDateMonth-1, startDateDay)));//Months zero indexed
+      console.log("convertedStartdate = " + convertedStartdate)
+    
+    //now determine the endDate based on the estimated effort of task
+    //This is goes through 2 funcitons.
+    //First  adding the day to the convertedStartDate then coverting the newEndDate into a clean YYY-MM-DD format 
+      let aNewEndDate = formatDate(addDays(convertedStartdate, 3));
+      console.log("aNewDate  = " + aNewEndDate)
+
+   
+//Read the 2nd elelment of the array which is the endDate 
+    let endDate2Plot = (dates2PlotArray[Loop][1]);  //= [1] = the 2nd date element in the array
+    console.log("endDate2Plot = " + endDate2Plot);
+    
+    
+    
+
+
+
+    
+//Validate whether the the startDate  & end Dates are on the canvas
+    const startMatch = roadMapDates.find(element => {
+      if (element.includes((startDate2Plot))) {
+        console.log("Found Start date " + startDate2Plot)
+        return true;
+      }
+      else { console.log("StartDate Notfound = " + startDate2Plot) }
+    });
+    
+    /*
+    // Use this if an endDate is to be used otherwise the offset-date is used
+      const endMatch = roadMapDates.find(element => {
+          if (element.includes((endDate2Plot))) {
+              console.log("Found end date " + endDate2Plot)
+              return true;
+          }
+          else { console.log("endDate Notfound = " + endDate2Plot) }
+      });
+    */
+    
+    const endMatch = roadMapDates.find(element => {
+      if (element.includes((endDate2Plot))) {
+        console.log("Found end date " + endDate2Plot)
+        return true;
+      }
+      else { console.log("endDate Notfound = " + endDate2Plot) }
+    });
+   
+    if ((startMatch && endMatch)) {
+      let readRange = roadMapSheet.getRange("I4:DO4")
+      console.log("both start and end found so will now plot the gannt")
+      
+      /*
+      Create the range for each startDate and endDate as follows:
+      1. find the column index for the startDate
+      2. find the column index for the endDate
+      3. Subtract the 2 column index will give the columnCount, i.e. the number of columns to include
+        in the range
+      */
+     
+     
+      startDate2Plot = String(startDate2Plot);
+      console.log("startDate2Plot =" +  startDate2Plot)
+      console.log("endDate2Plot =" + endDate2Plot)
+
+      
+      
+
+      //Determine the start and end columns to plot the gannt chart
+      let startDateIndex = dateArrayRange.find(startDate2Plot, { completeMatch: true }).getColumnIndex();
+      let endDateIndex = dateArrayRange.find(endDate2Plot, { completeMatch: true }).getColumnIndex();
+      
+      //Determine the number of cells to colour to make the Gannt Range
+      let cellRangeToPlot = (endDateIndex - startDateIndex) + 1
+
+
+//Clean the dates to a format which can be used in the addDate() function
+       // let startDateYear = startDate2Plot.split("/")
+       // console.log("startDateYear = " + startDateYear)
+
+
+  
+      console.log("startDateIndex = " + startDateIndex );
+      console.log("endDateIndex = " + endDateIndex);
+      console.log("cellRangeToPlot = " + cellRangeToPlot);
+ 
+/*
+    Another approach is to just read the durations of the test effort and from that plot the range directly 
+    The newEndDate can still be calculated and entered into spreadsheet if necessary
+*/
+   
+   let testEffort = Number(testEffortArrayRange[Loop])
+   console.log("testEffort =" + testEffort)
+
+latestCanvasDate
+      //Plot the Gannt based on the start column and number of cells to plot
+     // roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, cellRangeToPlot).getOffsetRange(5, 0).getFormat().getFill().setColor("Blue")
+
+        roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 0).getFormat().getFill().setColor("Blue")
+        roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 0).getFormat().getFont().setColor("White")
+        roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 0).setValue("P")
+
+        //Offset the effort for each activity
+
+
+//Test Training
+//Redo this so the end date of the previous activities is the start date of the new activity
+    roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 2+testEffort).getFormat().getFill().setColor("Green")
+        roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 2 + testEffort).setValue("KT")
+
+
+  //Test Preparation
+    roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 2 + testEffort + + testEffort + 1).getFormat().getFill().setColor("Yellow")
+    roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 2 + testEffort + + testEffort + 1).getFormat().setHorizontalAlignment
+    roadMapSheet.getRangeByIndexes(Loop, startDateIndex, 1, testEffort).getOffsetRange(5, 2 + testEffort + + testEffort + 1).setValue("T")
+      
+      console.log("looks good")
+      
+      //Highlight the date2plot row in greem to indicate successful plot
+      roadMapSheet.getRangeByIndexes(Loop  + 5, 6, 1, 1).getFormat().getFont().setColor("White")
+      roadMapSheet.getRangeByIndexes(Loop  + 5, 6, 1, 1).setValue("OK");
+      roadMapSheet.getRangeByIndexes(Loop  + 5, 6, 1, 1).getFormat().getFill().setColor("green");
+      roadMapSheet.getRangeByIndexes(Loop + 5, 7, 1, 1).setValue(Loop);
+      roadMapSheet.getRangeByIndexes(Loop + 5, 5, 1, 1).setValue(startDate2Plot);
+
+    }
+    else { 
+      console.log("this line wont be plotted");
+      //Highlight the date2plot row in red to indicate and error
+      roadMapSheet.getRangeByIndexes(Loop+6,6,1,1).getFormat().getFill().setColor("red");
+      roadMapSheet.getRangeByIndexes(Loop + 6, 6, 1, 1).getFormat().getFont().setColor("White")
+      roadMapSheet.getRangeByIndexes(Loop + 6, 6, 1, 1).setValue("ERROR");
+      }
+   
+    
+  }
+}
+
+/*---------------------------------------------------------------------
+         function addDays()
+ ---------------------------------------------------------------------*/
+
+function addDays(myDate: Date, myDays: number) {
+  var result = new Date(myDate);
+  result.setDate(result.getDate() + myDays);
+  return result;
+}
+
+/*---------------------------------------------------------------------
+         function formatDate(date:Date) ISO Format
+ ---------------------------------------------------------------------*/
+
+function formatDate(date2Convert:Date) {
+    var d = new Date(date2Convert),
+        month = '' + (d.getMonth()+1 ),
+        day = '' + d.getDate(),
+        year = d.getFullYear();
+
+    if (month.length < 2)
+        month = '0' + month;
+    if (day.length < 2)
+        day = '0' + day;
+
+    return [year, month, day].join('-');
+    //return [day, month, year].join('.');
+}
+
