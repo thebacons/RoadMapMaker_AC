@@ -1,5 +1,5 @@
 # RoadMapMaker_AC
-This version of RoadMapMaker is using office script and MS Excel. The node.js server is using adaptive cards. The node.js server connects to Microsoft powerautmate  and triggers a flow, which responds with the url of the roadmap as an Excel file it created.
+This version of RoadMapMaker uses Office script and MS Excel. The node.js server is using adaptive cards. The node.js server connects to Microsoft Powerautmate  and triggers a flow, which responds with the URL of the roadmap as an Excel file it created.
 # Overview
 
 This solution is a Node.js application that uses Express.js for server-side operations and Axios for making HTTP requests. The application serves a static HTML page and exposes an endpoint (`/trigger`) that triggers a Power Automate flow when a POST request is made to it. The Power Automate flow generates a roadmap based on the provided start and end dates and a flag indicating whether weekends should be included. The flow then returns a URL to the generated roadmap, which the application sends back to the client.
